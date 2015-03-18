@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import socket
 import base64
 import hashlib
@@ -41,8 +40,15 @@ class HandshakeRequest(object):
 class WebSocket(object):
     PACKET_LENGTH_MASK = int('01111111', 2)
     PAYLOAD_LENGTH = 4
-    def __init__(self, accept_socket):
+    def __init__(self, accept_socket, address):
         self._socket =  accept_socket
+        self._address = address
+
+    def __str__(self):
+        return str(self._address)
+
+    def address(self):
+        return self._address
 
     def handshake(self):
         data = self._socket.recv(8192)
@@ -75,46 +81,60 @@ class WebSocket(object):
         mask, raw = data[begin:end], data[end:]
         return mask, raw
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-socket_list = set()
+class WebSocketServer(object):
+    BACKLOG = 5
+    def __init__(self, service):
+        self._accept_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket_list = set()
+        self._clients = dict()
+        self._service = service
 
-def sendall(data):
-    for sock in socket_list:
-        if sock != server:
-            sock.send(data)
+    def run(self, port):
+        self._listen(port)
+        while True: self._process()
 
-def process(client, data): #you should change this method
-    client.send(data)
+    def _listen(self, port):
+        self._accept_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._accept_socket.bind(('', port))
+        self._accept_socket.listen(self.BACKLOG)
+        self._socket_list.add(self._accept_socket)
 
-def main(handle=process):
-    port = 7000
-    try:
-        server.bind(('', port))
-        server.listen(5)
-    except Exception, e:
-        print e
-        exit()
-    socket_list.add(server)
-    print 'server start on port %d' % port
-    clients = dict()
-    while True:
-        readables, w, e = select(socket_list, [], [])
-        for sock in readables:
-            if sock == server:
-                conn, addr = sock.accept()
-                client = WebSocket(conn)
-                if not client.handshake(): continue;
-                socket_list.add(conn)
-                clients[conn] = client
-            else:
-                client = clients[sock]
-                data = client.recv()
-                if not data:
-                    socket_list.remove(sock)
-                    del clients[sock]
-                else:
-                    handle(client, data)
+    def _process(self):
+        readables, w, e = select(self._socket_list, [], [])
+        for sock in readables: self._read_socket(sock)
+
+    def _read_socket(self, sock):
+        if sock == self._accept_socket: self._accept()
+        else: self._read_client(sock)
+
+    def _accept(self):
+        conn, addr = self._accept_socket.accept()
+        client = WebSocket(conn, addr)
+        if not client.handshake(): return
+        self._socket_list.add(conn)
+        self._clients[conn] = client
+        self._service.login(client)
+
+    def _read_client(self, sock):
+        client = self._clients[sock]
+        data = client.recv()
+        if data: self._service.receve(client, data)
+        else: self._disconnect(sock)
+
+    def _disconnect(self, sock):
+        self._service.logout(self._clients[sock])
+        self._socket_list.remove(sock)
+        del self._clients[sock]
+
+class EchoService(object):
+    def login(self, client):
+        print "login  %s" % str(client)
+
+    def logout(self, client):
+        print "logout %s" % str(client)
+
+    def receve(self, client, data):
+        client.send(data)
 
 if __name__ == '__main__':
-    main()
+    WebSocketServer(EchoService()).run(7000)
