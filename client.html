@@ -3,18 +3,45 @@
 <head>
 <title>WebSocket Client</title>
 <style>
-#output {
-    border: solid 1px #000;
+
+html,body,#output,#message {
+    background-color: black;
+    color: silver;
+    font-size: 14px;
+    width:99%;
 }
+
+html,body {
+    position: relative;
+    height:98%;
+}
+
+#output,#message {
+    position: absolute;
+    margin: auto;
+    font-family: 'Courier New';
+    border: groove 2px silver;
+}
+
+#output {
+    top: 0px;
+    bottom: 20px;
+    overflow-y: auto;
+    line-height: 10%;
+}
+
+#message {
+    height:12px;
+    bottom:0px;
+}
+
 </style>
 </head>
 <body>
 <form id="form">
-<input type="text" id="message">
-<button type="submit">Send</button>
-</form>
-<hr>
 <div id="output"></div>
+<input type="text" id="message">
+</form>
 <script>
 var inputBox = document.getElementById("message");
 var output = document.getElementById("output");
@@ -37,6 +64,7 @@ try {
         var p = document.createElement("p");
         p.innerHTML = e.data;
         output.appendChild(p);
+        output.scrollTop = output.scrollHeight;
     };
     // 接続エラー処理
     s.onerror = function (e) {
@@ -48,6 +76,7 @@ try {
 // submit処理
 form.addEventListener("submit", function (e) {
         e.preventDefault();
+        if (!inputBox.value) return;
         s.send(inputBox.value);
         inputBox.value = "";
         }, false)
