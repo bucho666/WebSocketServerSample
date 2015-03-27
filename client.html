@@ -25,13 +25,13 @@ html,body {
 
 #output {
     top: 0px;
-    bottom: 20px;
+    bottom: 24px;
     overflow-y: auto;
     line-height: 10%;
 }
 
 #message {
-    height:12px;
+    height:16px;
     bottom:0px;
 }
 
@@ -46,32 +46,37 @@ html,body {
 var inputBox = document.getElementById("message");
 var output = document.getElementById("output");
 var form = document.getElementById("form");
+function write_log(message, color){
+    var message_color = color || "Silver";
+    var p = document.createElement("p");
+    p.innerHTML = message
+    p.style.color = message_color;
+    output.appendChild(p);
+    output.scrollTop = output.scrollHeight;
+}
+
 try {
     var host = "ws://localhost:7000/";
     console.log("Host:", host);
     var s = new WebSocket(host);
     // 接続開始処理
     s.onopen = function (e) {
-        console.log("Socket opened.");
+        write_log("サーバとの接続が完了しました。", "green");
     };
     // 切断処理 
     s.onclose = function (e) {
-        console.log("Socket closed.");
+        write_log("サーバから切断されました。", "maroon");
     };
     // メッセージ受信処理
     s.onmessage = function (e) {
-        console.log("Socket message:", e.data);
-        var p = document.createElement("p");
-        p.innerHTML = e.data;
-        output.appendChild(p);
-        output.scrollTop = output.scrollHeight;
+        write_log(e.data);
     };
     // 接続エラー処理
     s.onerror = function (e) {
-        console.log("Socket error:", e);
+        write_log("通信エラー。", "maroon");
     };
 } catch (ex) {
-    console.log("Socket exception:", ex);
+    console.log("例外エラー。" + ex, "maroon");
 }
 // submit処理
 form.addEventListener("submit", function (e) {
