@@ -47,7 +47,7 @@ var inputBox = document.getElementById("message");
 var output = document.getElementById("output");
 var form = document.getElementById("form");
 try {
-    var host = "ws://" + window.location.hostname + ":7000";
+    var host = "ws://localhost:7000/";
     console.log("Host:", host);
     var s = new WebSocket(host);
     // 接続開始処理

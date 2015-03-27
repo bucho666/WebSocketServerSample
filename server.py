@@ -23,12 +23,12 @@ class HandshakeRequest(object):
                 'Upgrade: websocket\r\n'\
                 'Connection: Upgrade\r\n'\
                 'Sec-WebSocket-Accept:' + self._accept_key() + '\r\n\r\n'
-        
+
     def _accept_key(self):
         websocket_key = self._header[self.KEY_TAG]
         websocket_key += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
         return base64.b64encode(hashlib.sha1(websocket_key).digest())
-       
+
     def _parse_header(self, data):
         headers = dict()
         for l in data.splitlines():
@@ -67,12 +67,16 @@ class WebSocket(object):
         self._socket.send(head + data)
 
     def recv(self, size=8192):
-        recv_data = self._socket.recv(size)
+        try:
+            recv_data = self._socket.recv(size)
+        except socket.error:
+            return False
         if not len(recv_data): return False
         mask, raw = self._raw_data(recv_data)
-        data = [chr(ord(byte) ^ ord(mask[index % self.PAYLOAD_LENGTH])) for index, byte in enumerate(raw)]
+        data = [chr(ord(byte) ^ ord(mask[index % self.PAYLOAD_LENGTH])) \
+                for index, byte in enumerate(raw)]
         return ''.join(data)
- 
+
     def _raw_data(self, data):
         length = ord(data[1]) & self.PACKET_LENGTH_MASK
         if length == 126: begin, end = 4, 6
